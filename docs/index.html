@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A screen colour picker for Autodesk Revit. Pick any colour on any monitor, read its RGB values on the ribbon button, and add it to Revit's custom colours.">
+  <meta name="theme-color" content="#172033">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Pick-It — a screen colour picker for Revit">
+  <meta property="og:description" content="Pick any colour. Read it on the ribbon. An eyedropper for Revit that shows the RGB values on its own button and adds colours to Revit's custom palette.">
+  <meta property="og:url" content="https://jedbjorn.github.io/pick-it/">
+  <meta property="og:image" content="https://jedbjorn.github.io/pick-it/images/og-image.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <title>Pick-It — a screen colour picker for Revit</title>
+  <link rel="canonical" href="https://jedbjorn.github.io/pick-it/">
+  <link rel="icon" href="assets/pickit-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/site.css">
+  <script src="assets/site.js" defer></script>
+</head>
+<body id="top">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="Pick-It home">
+        <img src="assets/pickit-mark.svg" alt="" width="42" height="42">
+        <span class="brand-type">
+          <strong>Pick-It</strong>
+          <span>Colour picker for Autodesk Revit</span>
+        </span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="#features">Features</a>
+        <a href="#workflow">How it works</a>
+        <a href="#menu">Shift menu</a>
+        <a href="#palette">Palette</a>
+        <a href="#docs">Docs</a>
+      </nav>
+      <a class="github-link" href="https://github.com/jedbjorn/pick-it">
+        GitHub <span aria-hidden="true">↗</span>
+      </a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="container">
+        <div class="hero-copy">
+          <p class="eyebrow hero-eyebrow"><span aria-hidden="true"></span> Native add-in for Revit 2025–2027</p>
+          <h1>Pick any colour.<br>Read it on the <span><em>ribbon.</em></span></h1>
+          <p class="hero-lede">Click Pick-It, then click any pixel on any monitor. The button turns into that colour and shows its red, green and blue values, ready to type into any Revit colour dialog.</p>
+          <div class="button-row">
+            <a class="button button-primary" href="https://github.com/jedbjorn/pick-it/releases/latest">Download for Windows <span aria-hidden="true">↓</span></a>
+            <a class="button button-secondary" href="https://github.com/jedbjorn/pick-it">Explore on GitHub <span aria-hidden="true">↗</span></a>
+          </div>
+          <ul class="hero-notes" aria-label="Installation highlights">
+            <li>Per-user install</li>
+            <li>No admin rights required</li>
+            <li>MIT licensed</li>
+          </ul>
+        </div>
+
+        <figure class="hero-shot">
+          <div class="window-bar" aria-hidden="true">
+            <span class="window-dots"><i></i><i></i><i></i></span>
+            <span>Picking colours from a sheet in Autodesk Revit</span>
+            <span>PICK-IT</span>
+          </div>
+          <div class="clip-frame">
+            <video data-autoplay muted loop playsinline preload="metadata" poster="media/pick-flow-poster.webp" width="1280" height="864" aria-label="Screen recording: clicking Pick-It, moving the magnifier over a rendering and a logo, and clicking to pick. The ribbon button changes to the picked colour and shows its RGB values.">
+              <source src="media/pick-flow.mp4" type="video/mp4">
+            </video>
+          </div>
+          <figcaption>A real recording in Revit 2026, using Autodesk’s Snowdon Towers sample project. No sound.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="facts" aria-label="Product highlights">
+      <div class="container fact-grid">
+        <div><strong>Any pixel, any monitor</strong><span>Revit views, images, PDFs, web pages</span></div>
+        <div><strong>RGB on the button</strong><span>The colour stays until you pick again</span></div>
+        <div><strong>Three Revit years</strong><span>2025, 2026, and 2027 in one MSI</span></div>
+      </div>
+    </section>
+
+    <section class="section features" id="features">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">One button. One job.</p>
+          <h2>The colour you see, in numbers.</h2>
+          <p>Revit’s colour dialogs ask for red, green and blue. Pick-It gets those three numbers from anything on your screen and keeps them in view while you work.</p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-number">01</span>
+            <h3>A screen eyedropper</h3>
+            <p>Pick from anywhere on screen, not only from Revit: a reference image, a brand guide, a consultant’s PDF, or a view in another window.</p>
+            <a href="https://github.com/jedbjorn/pick-it#what-it-does">What it does <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">02</span>
+            <h3>A magnifier for the exact pixel</h3>
+            <p>The screen freezes while you pick. A magnifier shows the pixel under the pointer with its RGB and hex values before you click.</p>
+            <a href="#workflow">How picking works <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">03</span>
+            <h3>The icon is the readout</h3>
+            <p>After a pick, the ribbon icon is filled with the colour and shows R, G and B in black or white, whichever reads better. The tooltip adds the hex code.</p>
+            <a href="https://github.com/jedbjorn/pick-it/blob/main/docs/DESIGN.md#agreed-behaviour">Icon behaviour <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">04</span>
+            <h3>Recent colours</h3>
+            <p>Shift-click the button for your last ten picks. Click one to make it the current colour again. They are kept between Revit sessions.</p>
+            <a href="#menu">The Shift menu <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">05</span>
+            <h3>Add to Revit’s palette</h3>
+            <p>Store the current colour in one of the 16 custom-colour slots of Revit’s own Color dialog, so it is one click away wherever Revit asks for a colour.</p>
+            <a href="#palette">Add to palette <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">06</span>
+            <h3>Light and dark themes</h3>
+            <p>The idle icon and the menu follow Revit’s light or dark theme and switch with it. Pick-It also works with no project open.</p>
+            <a href="#themes">See it in dark <span aria-hidden="true">→</span></a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section workflow" id="workflow">
+      <div class="container">
+        <div class="section-heading section-heading-light">
+          <p class="eyebrow">From screen to ribbon</p>
+          <h2>One colour. Three clicks.</h2>
+          <p>There is no window to manage and nothing to set up. The button on the Add-Ins tab is the whole interface.</p>
+        </div>
+        <ul class="chip-row" aria-label="The Pick-It ribbon button after five different picks">
+          <li><img src="images/picked-magenta.png" alt="Pick-It button filled with magenta, showing 220, 24, 163" width="230" height="98" loading="lazy"></li>
+          <li><img src="images/picked-terra.png" alt="Pick-It button filled with terracotta, showing 190, 125, 98" width="230" height="98" loading="lazy"></li>
+          <li><img src="images/picked-green.png" alt="Pick-It button filled with green, showing 148, 200, 74" width="230" height="98" loading="lazy"></li>
+          <li><img src="images/picked-yellow.png" alt="Pick-It button filled with yellow, showing 228, 205, 70" width="230" height="98" loading="lazy"></li>
+          <li><img src="images/picked-blue.png" alt="Pick-It button filled with light blue, showing 142, 196, 224" width="230" height="98" loading="lazy"></li>
+        </ul>
+        <ol class="step-grid">
+          <li>
+            <span class="step-number">1</span>
+            <h3>Click Pick-It</h3>
+            <p>Open Revit’s Add-Ins tab and click the Pick-It button. The screen is frozen so nothing moves while you choose.</p>
+          </li>
+          <li>
+            <span class="step-number">2</span>
+            <h3>Click a pixel</h3>
+            <p>Move the magnifier over the colour you want and click. Esc or a right-click cancels and keeps the colour you had.</p>
+          </li>
+          <li>
+            <span class="step-number">3</span>
+            <h3>Read the values</h3>
+            <p>The button now shows the colour and its R, G and B values. It stays that way, across Revit sessions, until you pick again or clear it.</p>
+          </li>
+        </ol>
+        <div class="shot-grid shot-grid-two">
+          <figure class="shot-frame">
+            <img src="images/ribbon-idle.webp" alt="Revit’s Add-Ins tab with the idle Pick-It button, a blue eyedropper on a grey tile, above an open sheet" width="1280" height="720" loading="lazy">
+            <figcaption>Before a pick: the Pick-It button on the Add-Ins tab</figcaption>
+          </figure>
+          <figure class="shot-frame">
+            <img src="images/eyedropper.webp" alt="The Pick-It magnifier over a rendering of a brick facade, showing an enlarged pixel grid, a swatch, RGB 147, 116, 74 and its hex code" width="1100" height="640" loading="lazy">
+            <figcaption>Mid-pick: the magnifier with RGB and hex values</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section editor-section" id="menu">
+      <div class="container editor-grid">
+        <figure class="editor-shot">
+          <img src="images/shift-menu.webp" alt="The Pick-It menu under the ribbon button: the current colour with its RGB and hex values, ten recent colours in two rows, Clear, Clear history, and Add to palette" width="640" height="384" loading="lazy">
+          <figcaption>Shift-click the button for the menu</figcaption>
+        </figure>
+        <div class="editor-copy">
+          <p class="eyebrow">Small menu. Useful memory.</p>
+          <h2>Your last ten colours, one click away.</h2>
+          <p>Every pick is remembered automatically. Hold Shift and click the button to get them back.</p>
+          <ul class="check-list">
+            <li>The last 10 picks, newest first</li>
+            <li>Click a swatch to make it the current colour</li>
+            <li>Clear resets the icon; Clear history empties the list</li>
+            <li>Works from the keyboard with arrows, Tab, Enter and Esc</li>
+          </ul>
+          <a class="text-link" href="https://github.com/jedbjorn/pick-it#what-it-does">Read about the menu <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section palette-section" id="palette">
+      <div class="container">
+        <div class="editor-grid editor-grid-reverse">
+          <div class="editor-copy">
+            <p class="eyebrow">Into Revit’s own Color dialog</p>
+            <h2>Keep a colour in Revit’s palette.</h2>
+            <p>Add to palette… shows Revit’s 16 custom colours as the Color dialog lays them out. Click a slot and Pick-It stores the current colour there.</p>
+            <ul class="check-list">
+              <li>The colour is there the next time Revit asks for one</li>
+              <li>An occupied slot is replaced; the menu confirms the result</li>
+              <li>Revit keeps its custom colours when it closes normally</li>
+            </ul>
+            <a class="text-link" href="https://github.com/jedbjorn/pick-it/blob/main/docs/DESIGN.md#agreed-behaviour">How the palette write works <span aria-hidden="true">→</span></a>
+          </div>
+          <figure class="shot-frame">
+            <video controls muted loop playsinline preload="none" poster="media/add-to-palette-poster.webp" width="1280" height="800" aria-label="Screen recording: Shift-clicking Pick-It, choosing Add to palette, clicking slot 12, then opening Revit’s Color dialog from Object Styles, where the colour is in the custom colours.">
+              <source src="media/add-to-palette.mp4" type="video/mp4">
+            </video>
+            <figcaption>From the Shift menu to Revit’s Color dialog. A real recording, no sound.</figcaption>
+          </figure>
+        </div>
+
+        <div class="shot-grid">
+          <figure class="shot-frame">
+            <img src="images/palette-grid.webp" alt="The Add to palette view: Revit’s custom colours in two rows of eight, with the pointer over slot 11" width="640" height="384" loading="lazy">
+            <figcaption>1. Choose a slot</figcaption>
+          </figure>
+          <figure class="shot-frame">
+            <img src="images/palette-saved.webp" alt="The Add to palette view after a click: slot 12 shows the new colour and the menu reads Saved to slot 12" width="640" height="384" loading="lazy">
+            <figcaption>2. Pick-It confirms the slot</figcaption>
+          </figure>
+          <figure class="shot-frame">
+            <img src="images/revit-color-dialog.webp" alt="Revit’s Color dialog with the picked magenta in the third custom colour of the second row, selected, reading Red 220, Green 24, Blue 163" width="700" height="420" loading="lazy">
+            <figcaption>3. The colour in Revit’s Color dialog</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section theme-section" id="themes">
+      <div class="container editor-grid">
+        <figure class="editor-shot">
+          <img src="images/shift-menu-dark.webp" alt="Revit 2027 in its dark theme with the Pick-It menu open, showing a light blue current colour and seven recent colours" width="900" height="520" loading="lazy">
+          <figcaption>Pick-It in Revit 2027’s dark theme</figcaption>
+        </figure>
+        <div class="editor-copy">
+          <p class="eyebrow">At home in Revit</p>
+          <h2>Follows your theme.</h2>
+          <p>Pick-It uses Revit’s light or dark theme for its idle icon and its menu, and changes when you switch. Your current colour and recent colours are shared by every Revit version you have installed.</p>
+          <ul class="check-list">
+            <li>Light and dark ribbon icons</li>
+            <li>One list of recent colours for Revit 2025, 2026 and 2027</li>
+            <li>No project needs to be open</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section docs-section" id="docs">
+      <div class="container docs-grid">
+        <div class="docs-intro">
+          <p class="eyebrow">Clear by design</p>
+          <h2>Install once. Pick straight away.</h2>
+          <p>Run the MSI, restart Revit, and choose Always Load when Revit asks about the add-in. Pick-It installs for your Windows account only and needs no administrator rights.</p>
+          <a class="text-link" href="https://github.com/jedbjorn/pick-it#install">Read the installation guide <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="doc-links">
+          <a href="https://github.com/jedbjorn/pick-it#what-it-does"><span><strong>What it does</strong><small>Picking, the icon, and the Shift menu</small></span><span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/jedbjorn/pick-it#install"><span><strong>Install</strong><small>Per-user MSI for Revit 2025, 2026 and 2027</small></span><span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/jedbjorn/pick-it/blob/main/docs/DESIGN.md"><span><strong>Product and design brief</strong><small>Agreed behaviour and the Designs/OS design language</small></span><span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/jedbjorn/pick-it/blob/main/docs/DEVELOPING.md"><span><strong>For developers</strong><small>Repository layout and build configurations</small></span><span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="download-section">
+      <div class="container">
+        <div class="download-card">
+          <div>
+            <p class="eyebrow">Ready when you are</p>
+            <h2>Put the colour on the ribbon.</h2>
+            <p>Get Pick-It for Revit 2025, 2026, and 2027. One per-user MSI installs the add-in for every supported Revit year it finds.</p>
+          </div>
+          <div class="download-actions">
+            <div class="button-row">
+              <a class="button button-light" href="https://github.com/jedbjorn/pick-it/releases/latest">Get the latest MSI <span aria-hidden="true">↓</span></a>
+              <a class="button button-secondary" href="https://github.com/jedbjorn/pick-it#install">Installation guide <span aria-hidden="true">→</span></a>
+            </div>
+            <a href="https://github.com/jedbjorn/pick-it/releases">See all releases and notes <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <a class="brand brand-footer" href="#top" aria-label="Back to top">
+        <img src="assets/pickit-mark.svg" alt="" width="34" height="34">
+        <span class="brand-type"><strong>Pick-It</strong><span>Colour picker for Autodesk Revit</span></span>
+      </a>
+      <p>Native Revit add-in · MIT licensed · Designs/OS</p>
+      <div class="footer-links">
+        <a href="https://github.com/jedbjorn/pick-it">GitHub</a>
+        <a href="https://github.com/jedbjorn/pick-it/releases">Releases</a>
+        <a href="https://github.com/jedbjorn/pick-it/blob/main/LICENSE">License</a>
+        <a href="mailto:info@designs-os.com">Contact</a>
+      </div>
+    </div>
+    <div class="container footer-more">
+      <p>More projects: <a href="https://jedbjorn.github.io/gantt-it/">Gantt-It</a> · <a href="https://jedbjorn.github.io/fai-browser/">FAI Browser</a> · <a href="https://subfloor.designs-os.com">Subfloor</a> · <a href="https://jedbjorn.github.io/rst-c/">RST</a> · <a href="https://jedbjorn.github.io/splash-it/">Splash-It</a> · <a href="https://md-converter.designs-os.com">md-converter</a> · <a href="https://github.com/jedbjorn/storybench">Storybench</a> · <a href="https://jedbjorn.github.io/anj-cloud/">AnJ Cloud</a></p>
+    </div>
+  </footer>
+</body>
+</html>
