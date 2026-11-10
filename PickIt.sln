@@ -4,7 +4,11 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5B9CA19B-48A9-447F-AB80-2192575B681D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5F7E13F2-DA03-4086-ACB6-1C1724041952}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PickIt.Revit", "src\PickIt.Revit\PickIt.Revit.csproj", "{5590D5E3-E88B-4D50-8CE1-4F650A9E3EDA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PickIt.Tests", "tests\PickIt.Tests\PickIt.Tests.csproj", "{1C504BED-DD23-4913-B86F-236A83901315}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,11 +32,24 @@ Global
 		{5590D5E3-E88B-4D50-8CE1-4F650A9E3EDA}.Debug R27|Any CPU.Build.0 = Debug R27|Any CPU
 		{5590D5E3-E88B-4D50-8CE1-4F650A9E3EDA}.Release R27|Any CPU.ActiveCfg = Release R27|Any CPU
 		{5590D5E3-E88B-4D50-8CE1-4F650A9E3EDA}.Release R27|Any CPU.Build.0 = Release R27|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Debug R25|Any CPU.ActiveCfg = Debug R25|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Debug R25|Any CPU.Build.0 = Debug R25|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Release R25|Any CPU.ActiveCfg = Release R25|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Release R25|Any CPU.Build.0 = Release R25|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Debug R26|Any CPU.ActiveCfg = Debug R26|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Debug R26|Any CPU.Build.0 = Debug R26|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Release R26|Any CPU.ActiveCfg = Release R26|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Release R26|Any CPU.Build.0 = Release R26|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Debug R27|Any CPU.ActiveCfg = Debug R27|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Debug R27|Any CPU.Build.0 = Debug R27|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Release R27|Any CPU.ActiveCfg = Release R27|Any CPU
+		{1C504BED-DD23-4913-B86F-236A83901315}.Release R27|Any CPU.Build.0 = Release R27|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{5590D5E3-E88B-4D50-8CE1-4F650A9E3EDA} = {5B9CA19B-48A9-447F-AB80-2192575B681D}
+		{1C504BED-DD23-4913-B86F-236A83901315} = {5F7E13F2-DA03-4086-ACB6-1C1724041952}
 	EndGlobalSection
 EndGlobal

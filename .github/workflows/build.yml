@@ -1,5 +1,12 @@
 name: Build
 
+# CI for every PR and push to main. Delegates to the reusable _build.yml so
+# release.yml builds exactly the same pipeline: the six Debug/Release
+# configurations (Debug R25/R26/R27 upload the PickIt-Debug-R25 / -R26 / -R27
+# add-in artifacts), the Windows MSI job (PickIt-msi, PickIt-zips) and its
+# detection test (PickIt-detection). Every job is required. Push/PR builds
+# carry the dev version (0.0.0-dev; MSI ProductVersion 0.0.0).
+
 on:
   push:
     branches: [main]
@@ -16,24 +23,4 @@ concurrency:
 
 jobs:
   build:
-    name: Build ${{ matrix.configuration }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        configuration:
-          - Debug R25
-          - Release R25
-          - Debug R26
-          - Release R26
-          - Debug R27
-          - Release R27
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
-      - name: dotnet build
-        run: dotnet build PickIt.sln -c "${{ matrix.configuration }}" --nologo
+    uses: ./.github/workflows/_build.yml

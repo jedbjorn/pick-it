@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PickIt-<version>.msi — one per-user installer for Revit 2025, 2026 and 2027.
+
+  Adapted from splash-it installer/Product.wxs (splash-it commit 3f26fba), which
+  is adapted from gantt-it installer/Product.wxs (gantt-it commit aa83f35, the
+  smart installer of gantt-it PR #15). Keep the three in step: the Revit
+  detection, the per-year component conditions, the upgrade rules and the
+  folder cleanup are the same; only the product identity and the file set
+  differ.
+
+  Lays the add-in into the per-user Revit add-ins folder of each supported
+  Revit year that is installed on the computer, exactly as installer/stage.sh
+  lays out the Release builds:
+
+    %AppData%\Autodesk\Revit\Addins\<year>\
+      PickIt.addin                          manifest (Assembly=PickIt\PickIt.Revit.dll)
+      PickIt\
+        PickIt.Revit.dll, PickIt.Revit.pdb, PickIt.Revit.deps.json
+        Resources\icons\pick_16.png, pick_32.png
+                                            (+ _dark variants for Revit's dark theme)
+
+  There are no satellite language folders and no other assemblies: PickIt.Revit
+  is the only project. A file added to the add-in output (another DLL, a
+  language folder, more icons) must be added to the component list below and to
+  $perYear in inspect-msi.ps1, deliberately.
+  2025 and 2026 are built for net8.0-windows, 2027 for net10.0-windows.
+  PDBs ship (useful stack traces in bug reports); XML doc files do not
+  (installer/stage.sh drops them).
+
+  Revit detection (no custom actions, standard AppSearch only): a year counts
+  as installed when Revit.exe is found, see "Revit detection" below. Each
+  year's components carry Condition="REVIT<year>FOUND OR REMOVE~="ALL"" and
+  are Transitive, so a repair re-evaluates them: running the same MSI again
+  and choosing Repair adds a Revit year installed since (and drops one
+  uninstalled since). The REMOVE~="ALL" half keeps an uninstall, and the
+  removal of the old version during an upgrade, removing a year whose Revit
+  is already gone. A newer MSI is a major upgrade: it removes the old version
+  completely, files of every year included, then installs fresh for the
+  years it detects. When no supported year is found, a launch condition stops
+  a first install; uninstall and repair are never blocked by it.
+  installer/test-detection.ps1 proves all of this with real silent installs
+  on the CI runner.
+
+  Detection runs in both the UI and the execute sequence, so a silent
+  `msiexec /i PickIt-<version>.msi /qn` installs exactly the detected years
+  with no UI: the MSI is chainable (rst-c's setup bundle and tray, which
+  follow the companion contract C1-C7 in rst-c companions/README.md).
+
+  The only files Pick-It writes outside the add-in folders are its state
+  (%AppData%\Designs-OS\PickIt\state.json) and, in Debug builds only, a log
+  under %LocalAppData%\Temp\PickIt. They are written by the add-in, not by
+  this MSI, which owns neither, so the user's recent colours are kept across
+  upgrades and left in place on uninstall. Nothing is written under
+  %AppData%\RST\ (C6).
+
+  The package is x64: Revit 2025-2027 and the add-in are 64-bit only, and the
+  detection reads 64-bit registry keys and ProgramFiles64Folder, which a
+  32-bit package may not use (ICE80).
+
+  UpgradeCode is the stable identity of the Pick-It product family. NEVER
+  change it once shipped: it is how Windows Installer knows a new MSI
+  upgrades a prior install in place instead of installing side by side, and
+  rst-c's chained install and tray detection depend on it (C2).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="Pick-It"
+           Manufacturer="Designs/OS"
+           Version="$(var.PickItMsiVersion)"
+           UpgradeCode="9AED4E11-5334-46F6-971D-5344A97134B7"
+           Scope="perUser"
+           Compressed="yes">
+
+    <SummaryInformation Description="Pick-It: a screen eyedropper on the Revit ribbon (Revit 2025, 2026 and 2027)" />
+
+    <!-- Replace any prior install of the product family in place.
+         AllowSameVersionUpgrades: the MSI version is the tag's numeric a.b.c,
+         so v1.0.0-rc.1 and v1.0.0 (and every push/PR build, 0.0.0) share a
+         ProductVersion. Without it, installing the second over the first
+         would leave two entries in Settings > Apps. (Raises ICE61; see the
+         .wixproj.) The default schedule (afterInstallValidate) removes the
+         old version before anything new is installed, so an upgrade leaves
+         no files behind for a year that is not detected now. A newer
+         installed version is never downgraded. -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Branded setup UI. WixUI_Minimal fits a per-user install with nothing
+         to configure: welcome + license -> progress -> finish; run again, it
+         offers Repair or Remove. Its Repair button sets REINSTALL=ALL and
+         REINSTALLMODE=ecmus (WixUI VerifyReadyDlg), which is what
+         test-detection.ps1 passes for a silent repair. The banner shows on
+         every page; the dialog bitmap backs the welcome/exit pages. Needs
+         WixToolset.UI.wixext (see the .wixproj). Artwork is generated by
+         tools/make_installer_branding.py. -->
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUIBannerBmp"  Value="branding\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp"  Value="branding\dialog.bmp" />
+    <WixVariable Id="WixUILicenseRtf" Value="branding\License.rtf" />
+
+    <!-- Settings > Apps identity and links. -->
+    <Icon Id="PickItIcon.ico" SourceFile="branding\pickit.ico" />
+    <Property Id="ARPPRODUCTICON"   Value="PickItIcon.ico" />
+    <Property Id="ARPHELPLINK"      Value="https://github.com/jedbjorn/pick-it#install" />
+    <Property Id="ARPURLINFOABOUT"  Value="https://github.com/jedbjorn/pick-it" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/jedbjorn/pick-it/releases/latest" />
+
+    <!-- Revit detection. REVIT<year>FOUND is set to the path of Revit.exe
+         when either search finds it (a search that finds nothing leaves the
+         property alone, so the two act as an OR):
+           1. the folder in InstallLocation of Revit's uninstall entry,
+              {7346B4A0-<yy>00-0510-0000-705C0D862004} (Autodesk's product
+              code scheme; read on a real machine for 2026 and 2027 by
+              gantt-it, assumed for 2025 and confirmed by the FnB on a second
+              machine). The entry does not depend on Revit's install
+              language, unlike HKLM\SOFTWARE\Autodesk\Revit\<year>\REVIT-05:<lcid>.
+           2. the default folder, C:\Program Files\Autodesk\Revit <year>\.
+         The keys exist in the 64-bit registry only (no WOW6432Node copy),
+         hence Bitness="always64". Revit.exe sits directly in the folder
+         (Depth 0). An entry whose folder has no Revit.exe (a leftover) does
+         not count. AppSearch runs on every install, repair and uninstall,
+         so the properties always describe the computer as it is now. -->
+    <?foreach Yy in 25;26;27 ?>
+    <Property Id="REVIT20$(var.Yy)FOUND" Secure="yes">
+      <RegistrySearch Id="Revit20$(var.Yy)InstallLocation" Root="HKLM"
+                      Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{7346B4A0-$(var.Yy)00-0510-0000-705C0D862004}"
+                      Name="InstallLocation" Type="directory" Bitness="always64">
+        <DirectorySearch Id="Revit20$(var.Yy)ExeInInstallLocation" Depth="0">
+          <FileSearch Name="Revit.exe" />
+        </DirectorySearch>
+      </RegistrySearch>
+      <DirectorySearch Id="Revit20$(var.Yy)ExeInDefaultFolder"
+                       Path="[ProgramFiles64Folder]Autodesk\Revit 20$(var.Yy)" Depth="0">
+        <FileSearch Name="Revit.exe" />
+      </DirectorySearch>
+    </Property>
+    <?endforeach?>
+
+    <!-- A first install needs at least one supported Revit year. "Installed"
+         keeps repair and uninstall available on a computer that no longer
+         has any (an uninstall must always work). -->
+    <Launch Condition="Installed OR REVIT2025FOUND OR REVIT2026FOUND OR REVIT2027FOUND"
+            Message="Pick-It needs Revit 2025, 2026 or 2027, and none was found on this computer." />
+
+    <!-- An administrative install (msiexec /a) only unpacks the files to a
+         folder; it installs nothing and does not run AppSearch, so the
+         launch condition does not apply to it. inspect-msi.ps1 uses one to
+         read the packed DLLs' version stamps on a CI runner without Revit. -->
+    <AdminUISequence>
+      <LaunchConditions Suppress="yes" />
+    </AdminUISequence>
+    <AdminExecuteSequence>
+      <LaunchConditions Suppress="yes" />
+    </AdminExecuteSequence>
+
+    <!-- Per-user directory layout under %AppData% (Roaming). No admin
+         elevation is needed to install. Every folder the MSI creates is
+         declared, here and per Revit year below, so the folder-cleanup
+         components can name it. -->
+    <StandardDirectory Id="AppDataFolder">
+      <Directory Id="AutodeskFolder" Name="Autodesk">
+        <Directory Id="RevitFolder" Name="Revit">
+          <Directory Id="RevitAddinsFolder" Name="Addins" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- One feature: everything, always selected. What is installed is
+         decided per Revit year by the component conditions. -->
+    <Feature Id="Main" Title="Pick-It" Level="1">
+      <ComponentGroupRef Id="Revit2025" />
+      <ComponentGroupRef Id="Revit2026" />
+      <ComponentGroupRef Id="Revit2027" />
+    </Feature>
+
+    <!-- One folder tree and one component group per Revit year.
+
+         Each file is its own component (file KeyPath), authored explicitly
+         because harvested components cannot carry a Condition. Every
+         component of the year carries
+         Condition="REVIT<year>FOUND OR REMOVE~="ALL"" and Transitive="yes":
+         Windows Installer re-evaluates a transitive component's condition on
+         a reinstall (repair), installing it when the condition has become
+         true and removing it when it has become false. REMOVE~="ALL" makes
+         the condition true for a full uninstall (including the old version's
+         removal during a major upgrade), so a year is removed even when its
+         Revit was uninstalled first. inspect-msi.ps1 checks the file set
+         against both this list and the staged folders, so a file added to
+         the add-in output must be added here, deliberately.
+         Paths are relative to this .wxs (installer/). -->
+    <?foreach Year in 2025;2026;2027 ?>
+    <DirectoryRef Id="RevitAddinsFolder">
+      <Directory Id="Addins$(var.Year)Dir" Name="$(var.Year)">
+        <Directory Id="PickIt$(var.Year)Dir" Name="PickIt">
+          <Directory Id="Resources$(var.Year)Dir" Name="Resources">
+            <Directory Id="Icons$(var.Year)Dir" Name="icons" />
+          </Directory>
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+
+    <ComponentGroup Id="Revit$(var.Year)">
+      <Component Directory="Addins$(var.Year)Dir" Condition="REVIT$(var.Year)FOUND OR REMOVE~=&quot;ALL&quot;" Transitive="yes">
+        <File Id="Addin$(var.Year)" Source="stage\$(var.Year)\PickIt.addin" />
+      </Component>
+      <Component Directory="PickIt$(var.Year)Dir" Condition="REVIT$(var.Year)FOUND OR REMOVE~=&quot;ALL&quot;" Transitive="yes">
+        <File Id="RevitDll$(var.Year)" Source="stage\$(var.Year)\PickIt\PickIt.Revit.dll" />
+      </Component>
+      <Component Directory="PickIt$(var.Year)Dir" Condition="REVIT$(var.Year)FOUND OR REMOVE~=&quot;ALL&quot;" Transitive="yes">
+        <File Id="RevitPdb$(var.Year)" Source="stage\$(var.Year)\PickIt\PickIt.Revit.pdb" />
+      </Component>
+      <Component Directory="PickIt$(var.Year)Dir" Condition="REVIT$(var.Year)FOUND OR REMOVE~=&quot;ALL&quot;" Transitive="yes">
+        <File Id="RevitDeps$(var.Year)" Source="stage\$(var.Year)\PickIt\PickIt.Revit.deps.json" />
+      </Component>
+      <Component Directory="Icons$(var.Year)Dir" Condition="REVIT$(var.Year)FOUND OR REMOVE~=&quot;ALL&quot;" Transitive="yes">
+        <File Id="Icon16$(var.Year)" Source="stage\$(var.Year)\PickIt\Resources\icons\pick_16.png" />
+      </Component>
+      <Component Directory="Icons$(var.Year)Dir" Condition="REVIT$(var.Year)FOUND OR REMOVE~=&quot;ALL&quot;" Transitive="yes">
+        <File Id="Icon16Dark$(var.Year)" Source="stage\$(var.Year)\PickIt\Resources\icons\pick_16_dark.png" />
+      </Component>
+      <Component Directory="Icons$(var.Year)Dir" Condition="REVIT$(var.Year)FOUND OR REMOVE~=&quot;ALL&quot;" Transitive="yes">
+        <File Id="Icon32$(var.Year)" Source="stage\$(var.Year)\PickIt\Resources\icons\pick_32.png" />
+      </Component>
+      <Component Directory="Icons$(var.Year)Dir" Condition="REVIT$(var.Year)FOUND OR REMOVE~=&quot;ALL&quot;" Transitive="yes">
+        <File Id="Icon32Dark$(var.Year)" Source="stage\$(var.Year)\PickIt\Resources\icons\pick_32_dark.png" />
+      </Component>
+
+      <!-- Folder cleanup on uninstall. Windows Installer only removes a
+           folder it created when the RemoveFile table lists it, so each
+           year gets a component that removes PickIt\Resources\icons,
+           PickIt\Resources and PickIt\, each only if empty. A per-user
+           component needs an HKCU registry KeyPath,
+           hence the marker value. It follows the same condition as the
+           year's files. Addins\<year> is deliberately NOT removed: other
+           add-ins live there, and Revit owns it. -->
+      <Component Id="Folders$(var.Year)" Directory="PickIt$(var.Year)Dir"
+                 Condition="REVIT$(var.Year)FOUND OR REMOVE~=&quot;ALL&quot;" Transitive="yes">
+        <RegistryValue Root="HKCU" Key="Software\Designs/OS\Pick-It\$(var.Year)"
+                       Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+        <RemoveFolder Id="RemoveIcons$(var.Year)"     Directory="Icons$(var.Year)Dir"     On="uninstall" />
+        <RemoveFolder Id="RemoveResources$(var.Year)" Directory="Resources$(var.Year)Dir" On="uninstall" />
+        <RemoveFolder Id="RemovePickIt$(var.Year)"  Directory="PickIt$(var.Year)Dir"  On="uninstall" />
+      </Component>
+    </ComponentGroup>
+    <?endforeach?>
+
+  </Package>
+
+</Wix>

@@ -5,13 +5,21 @@
 
 **Pick-It** is a Revit add-in by Designs/OS for picking a colour and showing its RGB values directly on the ribbon button.
 
-> **Status: scaffold only.** This repository currently contains project scaffolding. The Revit entry point, colour picker, dynamic ribbon icon, and installer are not implemented yet, and there is nothing to install.
-
-## What it will do
+## What it does
 
 1. Click **Pick-It** on Revit's **Add-Ins** tab.
-2. Pick a colour.
-3. The Pick-It icon updates to show the picked colour and its RGB values.
+2. Click any pixel on any monitor. A magnifier shows exactly which pixel you are about to pick; Esc or right-click cancels.
+3. The Pick-It icon turns into that colour and shows its R, G and B values. It stays that way, across Revit sessions, until you pick again or clear it.
+
+**Shift-click** the button for the menu:
+
+- **Recent colours**: your last 10 picks. Click one to make it the current colour.
+- **Clear** and **Clear history**.
+- **Add to palette…**: puts the current colour into one of the 16 custom-colour slots of Revit's own Color dialog, so it is there the next time you set a colour anywhere in Revit.
+
+## Install
+
+Download `PickIt-<version>.msi` from the [latest release](https://github.com/jedbjorn/pick-it/releases/latest) and run it. It installs for the current user, needs no administrator rights, and adds Pick-It to every supported Revit version it finds. Restart Revit afterwards.
 
 ## Compatibility
 

@@ -1,0 +1,98 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+
+  <!--
+    PickIt.Installer — produces PickIt-<version>.msi (Windows only).
+    Adapted from splash-it installer/SplashIt.Installer.wixproj (splash-it commit 3f26fba),
+    itself from gantt-it installer/GanttIt.Installer.wixproj (gantt-it commit aa83f35).
+
+    Build, from the repo root on Windows:
+      dotnet build src/PickIt.Revit/PickIt.Revit.csproj -c "Release R25"
+      dotnet build src/PickIt.Revit/PickIt.Revit.csproj -c "Release R26"
+      dotnet build src/PickIt.Revit/PickIt.Revit.csproj -c "Release R27"
+      bash installer/stage.sh 2025
+      bash installer/stage.sh 2026
+      bash installer/stage.sh 2027
+      dotnet build installer/PickIt.Installer.wixproj -c Release
+    Output: installer/bin/Release/PickIt-<version>.msi
+
+    Not part of PickIt.sln: the Linux CI jobs build the solution, and WiX MSI
+    emission is Windows-only.
+
+    SDK pinned to 6.x, as in gantt-it and rst-c. Product.wxs authors every file
+    as its own conditional component (one set per Revit year).
+  -->
+
+  <!--
+    Version. One property, PickItVersion, carries the release tag into every
+    build (see Directory.Build.props): the release pipeline passes
+    -p:PickItVersion=1.0.0-rc.1, push/PR builds pass it EMPTY, local builds
+    omit it. Directory.Build.props derives the local $(Version) from it (a
+    global property, even an empty one, cannot be reassigned by a
+    PropertyGroup), falling back to the dev version 0.0.0-dev.
+
+    The MSI ProductVersion must be numeric, so it is the a.b.c part of
+    $(Version) with any prerelease/build suffix stripped: 1.0.0-rc.1 -> 1.0.0,
+    0.0.0-dev -> 0.0.0. It reaches Product.wxs as $(var.PickItMsiVersion)
+    through DefineConstants. The file name keeps the full version so release
+    candidates and finals are distinguishable: PickIt-1.0.0-rc.1.msi.
+  -->
+  <PropertyGroup>
+    <PickItMsiVersion>$([System.Text.RegularExpressions.Regex]::Match('$(Version)', '^\d+\.\d+\.\d+').Value)</PickItMsiVersion>
+    <DefineConstants>$(DefineConstants);PickItMsiVersion=$(PickItMsiVersion)</DefineConstants>
+    <OutputName>PickIt-$(Version)</OutputName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <Configurations>Debug;Release</Configurations>
+    <!-- x64 package (Template x64): Revit 2025-2027 and the add-in are
+         64-bit only, and the Revit detection in Product.wxs reads the 64-bit
+         registry and ProgramFiles64Folder, which ICE80 rejects in a 32-bit
+         package. -->
+    <InstallerPlatform>x64</InstallerPlatform>
+    <!-- The MSI ICE validation suite was authored for the per-machine
+         install model; some of its rules fire on every per-user
+         (Scope="perUser") package, a gap the WiX team acknowledges
+         (wixtoolset/issues#8633). Combined with the repo-wide
+         TreatWarningsAsErrors=true they would block the build:
+           ICE91 — "directory doesn't vary based on ALLUSERS"; that is
+                   the *intent* of perUser scope.
+           ICE38 — components in the user profile "should" have an HKCU
+                   KeyPath instead of a file KeyPath. Product.wxs keeps
+                   one component per file with the file as its KeyPath,
+                   so a repair checks and restores each file. (The
+                   folder-cleanup components in Product.wxs do use an HKCU
+                   KeyPath.)
+           ICE64 — every directory the package lays out in the user
+                   profile must be listed in the RemoveFile table
+                   (RemoveFolder), or it is left behind on uninstall.
+                   Product.wxs lists the folder Pick-It owns (PickIt\,
+                   per year). It deliberately does not list
+                   Autodesk\Revit\Addins\<year>\ and its parents: Revit
+                   owns them and other add-ins live there, so ICE64 still
+                   fires for exactly those six (Autodesk, Revit, Addins,
+                   2025, 2026, 2027) and stays suppressed.
+           ICE61 — warns that MajorUpgrade/@AllowSameVersionUpgrades also
+                   replaces an install of the same ProductVersion. That is
+                   deliberate (Product.wxs): an rc and its final share the
+                   numeric a.b.c, and must not end up side by side. -->
+    <SuppressIces>ICE38;ICE64;ICE91;ICE61</SuppressIces>
+  </PropertyGroup>
+
+  <!-- WixUI dialog set for the branded setup UI (WixUI_Minimal). The SDK
+       registers referenced wixext packages as build extensions. Version is
+       pinned centrally in Directory.Packages.props (Central Package
+       Management: no Version here, NU1008). -->
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" />
+  </ItemGroup>
+
+  <Target Name="PickItCheckVersion" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(PickItMsiVersion)' == ''"
+           Text="PickItVersion '$(Version)' does not start with a numeric a.b.c version." />
+    <Error Condition="!Exists('stage\2025\PickIt.addin') Or !Exists('stage\2026\PickIt.addin') Or !Exists('stage\2027\PickIt.addin')"
+           Text="installer/stage/2025, 2026 and 2027 must be staged first (installer/stage.sh)." />
+    <Message Importance="high" Text="Pick-It MSI: ProductVersion $(PickItMsiVersion) (version $(Version)) -> $(OutputName).msi" />
+  </Target>
+
+</Project>

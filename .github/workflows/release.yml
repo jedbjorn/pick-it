@@ -1,0 +1,204 @@
+name: release
+
+# Tag-driven GitHub Release (docs/DEVELOPING.md, Releasing).
+# Adapted from splash-it .github/workflows/release.yml (splash-it commit 3f26fba),
+# from gantt-it .github/workflows/release.yml (gantt-it commit aa83f35).
+#
+# Push a tag v<a.b.c>[-<prerelease>] (v1.0.0, v1.0.0-rc.1) and this workflow:
+#   1. prepare — validates the tag, resolves the version from it
+#                (v1.0.0-rc.1 -> 1.0.0-rc.1; MSI ProductVersion 1.0.0) and
+#                checks the tagged commit is reachable from origin/main.
+#   2. build   — runs the full _build.yml pipeline (the six configuration
+#                builds, the MSI and its detection test) against the tagged
+#                commit, stamping that version into the assemblies and the
+#                MSI.
+#   3. assets  — collects PickIt-<version>.msi, the three manual-install zips
+#                and SHA256SUMS.txt (read-only).
+#   4. publish — the only job with contents: write: creates the GitHub
+#                Release for the tag with those assets and auto-generated
+#                notes; marked pre-release when the tag has a hyphenated
+#                suffix.
+#
+# Nothing else publishes a release; pushes to main never tag.
+#
+# Manual runs (Actions > release > Run workflow) are ALWAYS dry runs: they take
+# a version, run prepare + build + assets exactly as a tag would, and skip
+# publish (so they never hold write access), printing what would have been
+# published instead. Use
+# them to rehearse a release or to produce a test MSI with a chosen version.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to rehearse, without the v (e.g. 1.0.0-rc.1). Dry run: nothing is published.'
+        type: string
+        required: true
+
+# Read-only by default; only the publish job may write (create the release).
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+
+  prepare:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      publish: ${{ steps.v.outputs.publish }}
+    steps:
+      - id: v
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT" == "push" && "$REF_TYPE" == "tag" ]]; then
+            tag="$REF_NAME"; publish=true
+          else
+            tag="v${INPUT_VERSION#v}"; publish=false
+          fi
+          version="${tag#v}"
+          # SemVer-shaped: numeric a.b.c (each part fits an MSI ProductVersion),
+          # optional -prerelease of dot-separated alphanumerics.
+          if ! [[ "$version" =~ ^(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,4})(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "::error::'$tag' is not v<major>.<minor>.<patch>[-<prerelease>]"
+            exit 1
+          fi
+          if (( BASH_REMATCH[1] > 255 || BASH_REMATCH[2] > 255 || BASH_REMATCH[3] > 65535 )); then
+            echo "::error::'$version' exceeds the MSI ProductVersion range (255.255.65535)"
+            exit 1
+          fi
+          prerelease=false
+          [[ "$version" == *-* ]] && prerelease=true
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "prerelease=$prerelease"
+            echo "publish=$publish"
+          } >> "$GITHUB_OUTPUT"
+          echo "tag $tag -> version $version (MSI ProductVersion ${version%%-*}); prerelease=$prerelease publish=$publish"
+
+      # Releases ship only what is on main: the tagged commit must be
+      # reachable from origin/main, or nothing is built. A dry run from
+      # another branch only warns.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Check the commit is on main
+        env:
+          PUBLISH: ${{ steps.v.outputs.publish }}
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+          if git merge-base --is-ancestor "$commit" origin/main; then
+            echo "$commit is reachable from origin/main"
+          elif [[ "$PUBLISH" == "true" ]]; then
+            echo "::error::$GITHUB_REF_NAME points at $commit, which is not on origin/main. Tag a commit on main."
+            exit 1
+          else
+            echo "::warning::$commit is not on origin/main (dry run, continuing)"
+          fi
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/_build.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+
+  # Read-only: gathers and checks the release assets. On a dry run it is the
+  # last job; on a tag it hands the assets to publish.
+  assets:
+    name: Release assets${{ needs.prepare.outputs.publish != 'true' && ' (dry run)' || '' }}
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: PickIt-msi
+          path: dist/
+      - uses: actions/download-artifact@v7
+        with:
+          name: PickIt-zips
+          path: dist/
+
+      - name: Check release assets
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          ls -l dist/
+          for f in "PickIt-$VERSION.msi" "PickIt-$VERSION-Revit2025.zip" "PickIt-$VERSION-Revit2026.zip" "PickIt-$VERSION-Revit2027.zip"; do
+            [[ -s "dist/$f" ]] || { echo "::error::missing release asset $f"; exit 1; }
+          done
+          # Diverges from gantt-it (aa83f35) on purpose: there, `sha256sum -- * |
+          # tee SHA256SUMS.txt` races tee's file creation against the glob, so
+          # SHA256SUMS.txt can list itself with a wrong hash. Write the sums
+          # outside dist/ first, then move them in.
+          sums="$RUNNER_TEMP/SHA256SUMS.txt"
+          (cd dist && sha256sum -- *) > "$sums"
+          mv "$sums" dist/SHA256SUMS.txt
+          cat dist/SHA256SUMS.txt
+          (cd dist && sha256sum -c SHA256SUMS.txt)
+
+      - name: Planned release
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+          PUBLISH: ${{ needs.prepare.outputs.publish }}
+        run: |
+          set -euo pipefail
+          prerel=""
+          [[ "$PRERELEASE" == "true" ]] && prerel=" --prerelease"
+          assets="$(cd dist && printf 'dist/%s ' *)"
+          if [[ "$PUBLISH" == "true" ]]; then
+            what="Publishing (job publish)"
+          else
+            what="Dry run, nothing is published. Would run"
+          fi
+          echo "$what: gh release create $TAG ${assets}--title \"Pick-It $TAG\" --generate-notes --verify-tag$prerel"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: release-assets
+          path: dist/
+          if-no-files-found: error
+
+  # The only job with write access. It runs only for a pushed tag, so a dry
+  # run never holds contents: write.
+  publish:
+    name: Publish GitHub Release
+    needs: [prepare, assets]
+    if: needs.prepare.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: release-assets
+          path: dist/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          args=(release create "$TAG" dist/* --title "Pick-It $TAG" --generate-notes --verify-tag)
+          [[ "$PRERELEASE" == "true" ]] && args+=(--prerelease)
+          gh "${args[@]}"
+

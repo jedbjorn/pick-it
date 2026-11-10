@@ -50,8 +50,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>$(NoWarn);1591;CA1416</NoWarn>
-    <DebugType>portable</DebugType>
-    <DebugSymbols>true</DebugSymbols>
+    <!-- WiX (.wixproj) only accepts 'full' or 'none' for -pdbType, so the
+         portable PDB settings apply to managed projects only. -->
+    <DebugType Condition="'$(MSBuildProjectExtension)' != '.wixproj'">portable</DebugType>
+    <DebugSymbols Condition="'$(MSBuildProjectExtension)' != '.wixproj'">true</DebugSymbols>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
 
