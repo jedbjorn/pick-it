@@ -1,0 +1,286 @@
+name: _build (reusable)
+
+# The one build pipeline, shared by build.yml (every PR and push to main) and
+# release.yml (v* tags), so a release builds exactly what CI builds. Pattern
+# from splash-it / gantt-it .github/workflows/_build.yml (splash-it commit
+# 3f26fba). Leading underscore = internal, not triggered directly.
+#
+#   * test    - tests/PickIt.Tests on Ubuntu (net8.0): the eyedropper's pure
+#               geometry and pixel lookup, compiled from linked source, so no
+#               WPF, Windows or Revit is needed. As in gantt-it's test job.
+#   * build   - PickIt.sln (the add-in and the tests) in all six
+#               configurations (Ubuntu), after test. Every leg is required. The Debug legs stage the add-in as an artifact laid
+#               out like %AppData%\Autodesk\Revit\Addins\<year>\
+#               (PickIt.addin + PickIt\ folder):
+#                 gh run download <run-id> -n PickIt-Debug-R26
+#               (PickIt-Debug-R25 / -R26 / -R27).
+#   * msi     - Windows runner (WiX emits MSIs on Windows only). Builds
+#               Release R25 + R26 + R27, stages each with installer/stage.sh,
+#               builds the per-user installer/PickIt.Installer.wixproj
+#               (installs only the Revit years it finds on the computer),
+#               checks it with installer/inspect-msi.ps1 and uploads:
+#                 PickIt-msi   PickIt-<version>.msi
+#                 PickIt-zips  PickIt-<version>-Revit2025.zip / -Revit2026.zip /
+#                              -Revit2027.zip (the Addins\<year>\ contents,
+#                              for manual installs)
+#   * detect  - Windows runner (admin), after msi: installer/test-detection.ps1
+#               installs that MSI for real with msiexec /qn against fake Revit
+#               installs (uninstall entries in HKLM, Revit.exe dummies) and
+#               checks which Addins\<year>\ folders it fills. This is the
+#               silent-install behaviour rst-c's setup bundle and tray rely on
+#               (companion contract C1-C4, C6). Uploads the per-case results and
+#               every msiexec log:
+#                 gh run download <run-id> -n PickIt-detection
+#
+# Linux builds the net8.0-windows / net10.0-windows targets thanks to
+# EnableWindowsTargeting and the reference-only Nice3point Revit API packages.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: >-
+          Version to stamp, the release tag without its "v" (1.0.0, 1.0.0-rc.1).
+          Empty for push/PR builds: the dev version from Directory.Build.props
+          applies (0.0.0-dev).
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+
+  # From gantt-it .github/workflows/_build.yml, test job. The configuration only
+  # has to be one Directory.Build.props knows; the tests ignore the Revit suffix.
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: dotnet test (net8.0)
+        run: >-
+          dotnet test tests/PickIt.Tests/PickIt.Tests.csproj
+          -c "Release R26" --nologo
+          --logger "console;verbosity=normal"
+
+  build:
+    name: Build ${{ matrix.configuration }}
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - configuration: Debug R25
+            tfm: net8.0-windows
+            artifact: PickIt-Debug-R25
+          - configuration: Release R25
+            tfm: net8.0-windows
+          - configuration: Debug R26
+            tfm: net8.0-windows
+            artifact: PickIt-Debug-R26
+          - configuration: Release R26
+            tfm: net8.0-windows
+          - configuration: Debug R27
+            tfm: net10.0-windows
+            artifact: PickIt-Debug-R27
+          - configuration: Release R27
+            tfm: net10.0-windows
+    env:
+      PICKIT_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: dotnet build
+        run: >-
+          dotnet build PickIt.sln -c "${{ matrix.configuration }}" --nologo
+          "-p:PickItVersion=${PICKIT_VERSION}"
+
+      - name: Stage add-in
+        if: matrix.artifact
+        env:
+          OUT: src/PickIt.Revit/bin/${{ matrix.configuration }}/${{ matrix.tfm }}
+        run: |
+          set -euo pipefail
+          mkdir -p stage/PickIt
+          cp "$OUT/PickIt.addin" stage/
+          cp -r "$OUT/." stage/PickIt/
+          rm stage/PickIt/PickIt.addin
+          find stage -type f | sort
+
+      - uses: actions/upload-artifact@v6
+        if: matrix.artifact
+        with:
+          name: ${{ matrix.artifact }}
+          path: stage/
+          if-no-files-found: error
+
+  # From gantt-it .github/workflows/_build.yml, msi job (gantt-it commit aa83f35),
+  # via splash-it.
+  msi:
+    name: MSI (Release R25 + R26 + R27)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Passed even when empty: Directory.Build.props falls back to the dev
+      # version (an empty global property cannot be reassigned, so it derives
+      # the local $(Version) instead).
+      PICKIT_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: dotnet build Release R25 + Release R26 + Release R27
+        run: |
+          set -euo pipefail
+          for cfg in "Release R25" "Release R26" "Release R27"; do
+            dotnet build src/PickIt.Revit/PickIt.Revit.csproj -c "$cfg" --nologo \
+              "-p:PickItVersion=${PICKIT_VERSION}"
+          done
+
+      - name: Stage add-in (2025, 2026, 2027)
+        run: |
+          set -euo pipefail
+          bash installer/stage.sh 2025
+          bash installer/stage.sh 2026
+          bash installer/stage.sh 2027
+
+      - name: Build MSI
+        run: >-
+          dotnet build installer/PickIt.Installer.wixproj -c Release --nologo
+          "-p:PickItVersion=${PICKIT_VERSION}"
+
+      - name: Locate MSI
+        id: msi
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          found=(installer/bin/**/PickIt-*.msi)
+          if [[ ${#found[@]} -ne 1 ]]; then
+            echo "::error::expected one PickIt-*.msi, found ${#found[@]}: ${found[*]}"
+            exit 1
+          fi
+          # The version the build was asked for, independent of the build's
+          # outputs: the input, else the dev fallback of Directory.Build.props.
+          version="${PICKIT_VERSION:-0.0.0-dev}"
+          {
+            echo "path=${found[0]}"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+          echo "${found[0]} (expected version $version)"
+
+      # Checks the MSI against the requested version, not against itself: file
+      # name, ProductVersion and each year's PickIt.Revit.dll ProductVersion
+      # (= InformationalVersion). Dev builds carry "+<commit>" build metadata,
+      # hence -AllowBuildMetadata. Also checks the Revit detection wiring
+      # (AppSearch, per-year component conditions, launch condition) and, with
+      # -Stage, that the staged folders hold exactly the files Product.wxs
+      # lists.
+      - name: Inspect MSI (identity, layout, detection, version stamps)
+        shell: powershell
+        env:
+          MSI_PATH: ${{ steps.msi.outputs.path }}
+          VERSION: ${{ steps.msi.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $extra = @{}
+          if (-not $env:PICKIT_VERSION) { $extra['AllowBuildMetadata'] = $true }
+          & ./installer/inspect-msi.ps1 -Msi $env:MSI_PATH -Version $env:VERSION -Stage installer/stage @extra
+          exit $LASTEXITCODE
+
+      - name: Zip add-in folders (manual install)
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.msi.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path zips | Out-Null
+          foreach ($year in '2025', '2026', '2027') {
+            Compress-Archive -Path "installer/stage/$year/*" `
+              -DestinationPath "zips/PickIt-$env:VERSION-Revit$year.zip" -Force
+          }
+          Get-ChildItem zips | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: PickIt-msi
+          path: ${{ steps.msi.outputs.path }}
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: PickIt-zips
+          path: zips/*.zip
+          if-no-files-found: error
+
+  # From splash-it (no gantt-it counterpart). Installs the
+  # MSI built above for real, silently, against fake Revit installs, and
+  # checks exactly which Addins\<year>\ folders it fills. GitHub's Windows
+  # runners run as an administrator, which the fake HKLM entries need.
+  detect:
+    name: MSI detection (silent installs, fake Revit)
+    needs: msi
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: PickIt-msi
+          path: dist/
+      - uses: actions/download-artifact@v7
+        with:
+          name: PickIt-zips
+          path: dist/
+
+      # The zips hold each year's staged Addins\<year>\ contents: the exact
+      # files an install of that year must create.
+      - name: Unzip the expected file sets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($year in '2025', '2026', '2027') {
+            $zip = @(Get-ChildItem dist -Filter "PickIt-*-Revit$year.zip")
+            if ($zip.Count -ne 1) { throw "expected one PickIt-*-Revit$year.zip, found $($zip.Count)" }
+            Expand-Archive -Path $zip[0].FullName -DestinationPath "expected/$year"
+          }
+          Get-ChildItem -Recurse -File expected | ForEach-Object { $_.FullName }
+
+      - name: Detection cases (msiexec /qn)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $msi = @(Get-ChildItem dist -Filter 'PickIt-*.msi')
+          if ($msi.Count -ne 1) { throw "expected one PickIt-*.msi, found $($msi.Count)" }
+          & ./installer/test-detection.ps1 -Msi $msi[0].FullName -OutDir detection -Expected expected
+          exit $LASTEXITCODE
+
+      - name: Summary
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path detection/results.md) { Get-Content detection/results.md >> $env:GITHUB_STEP_SUMMARY }
+
+      # Uploaded even when a case fails, so the msiexec logs can be read.
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: PickIt-detection
+          path: detection/
+          if-no-files-found: error

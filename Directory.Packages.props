@@ -18,4 +18,18 @@
     <PackageVersion Include="Nice3point.Revit.Api.RevitAPIUI" Version="2027.0.0" />
   </ItemGroup>
 
+  <!-- Installer UI: the WixUI dialog set for the branded MSI setup. Tracks the
+       WixToolset.Sdk version pinned in installer/PickIt.Installer.wixproj
+       (from splash-it Directory.Packages.props). -->
+  <ItemGroup>
+    <PackageVersion Include="WixToolset.UI.wixext" Version="6.0.2" />
+  </ItemGroup>
+
+  <!-- Test stack (tests/PickIt.Tests), the versions Gantt-It uses. -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.NET.Test.Sdk"    Version="17.14.1" />
+    <PackageVersion Include="xunit"                     Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
 </Project>

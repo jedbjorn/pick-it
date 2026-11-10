@@ -1,0 +1,52 @@
+<Window x:Class="PickIt.Revit.UI.Picking.ScreenPickOverlay"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pick a colour" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
+        Topmost="True" ShowActivated="False" WindowStartupLocation="Manual"
+        Left="-32000" Top="-32000" Width="16" Height="16"
+        Background="Black" Cursor="Cross" ForceCursor="True"
+        FontFamily="Segoe UI" FontSize="12" TextOptions.TextFormattingMode="Display"
+        AutomationProperties.AutomationId="ScreenPickOverlay">
+    <!--
+        One per monitor while the eyedropper runs: shows the frozen screenshot of its
+        monitor full size, with the magnifier following the pointer. Positioned in physical
+        pixels by ScreenColorPicker. Nothing here depends on the window's laid-out size,
+        which lags behind when the window lands on a monitor with another scale factor:
+        the root is a Canvas, and the code-behind sizes the screenshot and places the
+        magnifier from the window's scale factor (monitor pixels / scale = DIPs).
+        The magnifier's colours come from the palette of Revit's theme (set in code).
+    -->
+    <Canvas>
+        <Image x:Name="Screenshot" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+
+        <Border x:Name="Loupe" Visibility="Collapsed" IsHitTestVisible="False"
+                BorderThickness="1" CornerRadius="4" Padding="6"
+                AutomationProperties.AutomationId="ScreenPick.Loupe">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.35" />
+            </Border.Effect>
+            <StackPanel>
+                <Canvas x:Name="Zoom" Background="#808080" ClipToBounds="True">
+                    <Image x:Name="Cells" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                    <Rectangle x:Name="GridLines" IsHitTestVisible="False" />
+                    <Rectangle x:Name="CentreOuter" Stroke="Black" StrokeThickness="1" SnapsToDevicePixels="True" />
+                    <Rectangle x:Name="CentreInner" Stroke="White" StrokeThickness="1" SnapsToDevicePixels="True" />
+                </Canvas>
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Border x:Name="Swatch" Width="28" Height="28" CornerRadius="3" BorderThickness="1"
+                            Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="RgbText" FontSize="13" FontWeight="SemiBold"
+                                   AutomationProperties.AutomationId="ScreenPick.Rgb" />
+                        <TextBlock x:Name="HexText" FontFamily="Consolas" FontSize="11"
+                                   AutomationProperties.AutomationId="ScreenPick.Hex" />
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock x:Name="HintText" Text="Click to pick · Esc to cancel" FontSize="11" Margin="0,4,0,0" />
+                <!-- Shown on a monitor with HDR (advanced colour) on: the screen copy is tone-mapped. -->
+                <TextBlock x:Name="HdrText" Text="HDR is on: colours may be off" FontSize="11" Margin="0,2,0,0"
+                           Visibility="Collapsed" AutomationProperties.AutomationId="ScreenPick.Hdr" />
+            </StackPanel>
+        </Border>
+    </Canvas>
+</Window>
