@@ -1,0 +1,21 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RevitVersion)' == '2025'">
+    <PackageVersion Include="Nice3point.Revit.Api.RevitAPI" Version="2025.0.2" />
+    <PackageVersion Include="Nice3point.Revit.Api.RevitAPIUI" Version="2025.0.2" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(RevitVersion)' == '2026'">
+    <PackageVersion Include="Nice3point.Revit.Api.RevitAPI" Version="2026.0.4" />
+    <PackageVersion Include="Nice3point.Revit.Api.RevitAPIUI" Version="2026.0.4" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(RevitVersion)' == '2027'">
+    <PackageVersion Include="Nice3point.Revit.Api.RevitAPI" Version="2027.0.0" />
+    <PackageVersion Include="Nice3point.Revit.Api.RevitAPIUI" Version="2027.0.0" />
+  </ItemGroup>
+
+</Project>

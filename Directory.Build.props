@@ -1,0 +1,58 @@
+<Project>
+
+  <PropertyGroup>
+    <Configurations>Debug R25;Release R25;Debug R26;Release R26;Debug R27;Release R27</Configurations>
+    <Configuration Condition="'$(Configuration)' == ''">Debug R26</Configuration>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RevitVersion Condition="$(Configuration.Contains('R25'))">2025</RevitVersion>
+    <RevitVersion Condition="$(Configuration.Contains('R26'))">2026</RevitVersion>
+    <RevitVersion Condition="$(Configuration.Contains('R27'))">2027</RevitVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RevitTargetFramework Condition="'$(RevitVersion)' == '2025'">net8.0-windows</RevitTargetFramework>
+    <RevitTargetFramework Condition="'$(RevitVersion)' == '2026'">net8.0-windows</RevitTargetFramework>
+    <RevitTargetFramework Condition="'$(RevitVersion)' == '2027'">net10.0-windows</RevitTargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PlainConfiguration Condition="$(Configuration.StartsWith('Debug'))">Debug</PlainConfiguration>
+    <PlainConfiguration Condition="$(Configuration.StartsWith('Release'))">Release</PlainConfiguration>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(PlainConfiguration)' == 'Debug'">
+    <Optimize>false</Optimize>
+    <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(PlainConfiguration)' == 'Release'">
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Product>Pick-It</Product>
+    <Company>Designs/OS</Company>
+    <Authors>jedbjorn</Authors>
+    <Copyright>© 2026 Designs/OS</Copyright>
+    <RepositoryUrl>https://github.com/jedbjorn/pick-it</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Version>0.0.0-dev</Version>
+    <Version Condition="'$(PickItVersion)' != ''">$(PickItVersion)</Version>
+    <IncludeSourceRevisionInInformationalVersion Condition="'$(PickItVersion)' != ''">false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);1591;CA1416</NoWarn>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+</Project>

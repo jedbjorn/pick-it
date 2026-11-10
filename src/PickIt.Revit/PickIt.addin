@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Pick-It</Name>
+    <Assembly>PickIt\PickIt.Revit.dll</Assembly>
+    <FullClassName>PickIt.Revit.App</FullClassName>
+    <ClientId>4ba74feb-9790-415b-943c-d1a5a95e4acc</ClientId>
+    <VendorId>DSOS</VendorId>
+    <VendorDescription>Designs/OS</VendorDescription>
+  </AddIn>
+</RevitAddIns>
