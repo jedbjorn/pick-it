@@ -721,6 +721,10 @@ h3 {
   font-size: 0.76rem;
 }
 
+.footer-inner > p a {
+  text-decoration: underline;
+}
+
 .footer-links {
   display: flex;
   gap: 24px;
