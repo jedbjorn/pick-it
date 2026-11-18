@@ -25,6 +25,8 @@
 
 Download `PickIt-<version>.msi` from the [latest release](https://github.com/jedbjorn/pick-it/releases/latest) and run it. It installs for the current user, needs no administrator rights, and adds Pick-It to every supported Revit version it finds. Restart Revit afterwards.
 
+Releases after v1.0.0 are digitally signed by **AnJ Arch-Tech LLC**, the company behind Designs/OS. To check, right-click the MSI and choose **Properties › Digital Signatures**: the signer is AnJ Arch-Tech LLC, with a timestamp. If Windows says "Windows protected your PC", choose **More info**: the publisher must read AnJ Arch-Tech LLC (v1.0.0: unknown, it is unsigned), then **Run anyway**. If Revit asks whether to load Pick-It, choose **Always Load**.
+
 ## Compatibility
 
 Revit 2025, 2026 and 2027 on Windows, matching [Gantt-It](https://github.com/jedbjorn/gantt-it). Older versions of Revit are not planned.

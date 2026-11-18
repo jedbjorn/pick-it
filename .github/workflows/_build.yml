@@ -32,6 +32,18 @@ name: _build (reusable)
 #               every msiexec log:
 #                 gh run download <run-id> -n PickIt-detection
 #
+# Code signing (input sign; true only from release.yml on a pushed v* tag): the
+# msi job then joins environment "signing" (OIDC to Azure Artifact Signing,
+# account and profile from that environment's variables) and Authenticode-signs
+# every staged PickIt*.dll before WiX packs it, so the MSI and the zips carry
+# the same signed bytes, then signs the MSI before upload. Each signature: SHA-256,
+# RFC 3161 timestamp from timestamp.acs.microsoft.com, description
+# "Designs/OS Pick-It", signer AnJ Arch-Tech LLC. installer/verify-signatures.ps1
+# then fails the job unless the MSI and every DLL inside it and in the zips is
+# validly signed by AnJ Arch-Tech LLC and timestamped. On every other build
+# (PR, push, release dry run) the sign steps are skipped, no job names the
+# signing environment, and the same script checks that nothing is signed.
+#
 # Linux builds the net8.0-windows / net10.0-windows targets thanks to
 # EnableWindowsTargeting and the reference-only Nice3point Revit API packages.
 
@@ -46,6 +58,14 @@ on:
         type: string
         required: false
         default: ''
+      sign:
+        description: >-
+          Authenticode-sign the add-in binaries and the MSI (environment
+          "signing"). release.yml passes true only for a pushed v* tag; the
+          environment admits nothing else.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -131,6 +151,16 @@ jobs:
   msi:
     name: MSI (Release R25 + R26 + R27)
     runs-on: windows-latest
+    # The signing environment only on a signing run: on any other run the name
+    # is empty, so the job deploys to no environment (that environment admits
+    # v* tags only). id-token: write lets azure/login exchange the job's OIDC
+    # token; Entra trusts only the subject
+    # repo:jedbjorn/pick-it:environment:signing, so a token from any other run
+    # is worthless, and no step but the skipped sign steps asks for one.
+    environment: ${{ inputs.sign && 'signing' || '' }}
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         shell: bash
@@ -161,6 +191,55 @@ jobs:
           bash installer/stage.sh 2025
           bash installer/stage.sh 2026
           bash installer/stage.sh 2027
+
+      # Signing run only. files-folder signs every DLL/EXE under
+      # installer/stage, so first check they are all Pick-It's own.
+      - name: Check the staged binaries are Pick-It's own
+        if: inputs.sign
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pe = @(Get-ChildItem installer/stage -Recurse -File | Where-Object { $_.Extension -in '.dll', '.exe' })
+          $foreign = @($pe | Where-Object { $_.Name -notlike 'PickIt.*' })
+          $foreign | ForEach-Object { Write-Host "::error::$($_.FullName) is not a Pick-It binary; decide whether it ships and is signed" }
+          if ($foreign.Count -or -not $pe.Count) { exit 1 }
+          $pe | ForEach-Object { Write-Host $_.FullName }
+
+      # Logged in right before each signing step: the federated assertion
+      # azure/login hands the Azure CLI is short-lived.
+      - name: Azure login (OIDC, payload)
+        if: inputs.sign
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Before WiX: the MSI and the manual-install zips both pack these files.
+      - name: Sign the add-in binaries (all three years)
+        if: inputs.sign
+        uses: Azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\installer\stage
+          files-folder-filter: dll,exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Designs/OS Pick-It
+          exclude-environment-credential: true
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: false
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
 
       - name: Build MSI
         run: >-
@@ -205,6 +284,45 @@ jobs:
           & ./installer/inspect-msi.ps1 -Msi $env:MSI_PATH -Version $env:VERSION -Stage installer/stage @extra
           exit $LASTEXITCODE
 
+      - name: Resolve the MSI path for signing
+        if: inputs.sign
+        id: msi-full
+        shell: pwsh
+        env:
+          MSI_PATH: ${{ steps.msi.outputs.path }}
+        run: Add-Content -Path $env:GITHUB_OUTPUT -Value "path=$((Resolve-Path $env:MSI_PATH).Path)"
+
+      - name: Azure login (OIDC, MSI)
+        if: inputs.sign
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign the MSI
+        if: inputs.sign
+        uses: Azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.SIGNING_PROFILE }}
+          files: ${{ steps.msi-full.outputs.path }}
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Designs/OS Pick-It
+          exclude-environment-credential: true
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: false
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
+
       - name: Zip add-in folders (manual install)
         shell: pwsh
         env:
@@ -217,6 +335,23 @@ jobs:
               -DestinationPath "zips/PickIt-$env:VERSION-Revit$year.zip" -Force
           }
           Get-ChildItem zips | Format-Table Name, Length
+
+      # Signing run: the MSI and every DLL inside it and in the zips must be
+      # Valid, signed by AnJ Arch-Tech LLC and timestamped, or nothing is
+      # uploaded (and release.yml publishes nothing). Any other run: none of
+      # them may be signed.
+      - name: Verify signatures (MSI, its DLLs, the zips)
+        shell: powershell
+        env:
+          MSI_PATH: ${{ steps.msi.outputs.path }}
+          SIGN: ${{ inputs.sign }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $extra = @{}
+          if ($env:SIGN -ne 'true') { $extra['Unsigned'] = $true }
+          $zips = @(Get-ChildItem zips -Filter '*.zip' | ForEach-Object { $_.FullName })
+          & ./installer/verify-signatures.ps1 -Msi $env:MSI_PATH -Zips $zips @extra
+          exit $LASTEXITCODE
 
       - uses: actions/upload-artifact@v6
         with:
