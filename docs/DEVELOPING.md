@@ -114,7 +114,7 @@ The **Build** workflow runs for pull requests and pushes to `main`, and can be s
 
 - **test:** `tests/PickIt.Tests` on Ubuntu (`dotnet test tests/PickIt.Tests/PickIt.Tests.csproj -c "Release R26"`; the tests ignore the Revit suffix, the configuration only has to be one `Directory.Build.props` knows). The build legs wait for it.
 - **build:** all six Debug/Release configurations on Ubuntu with .NET 8 and .NET 10. The Debug legs upload `PickIt-Debug-R25/R26/R27`, the add-in laid out like `Addins\<year>\`.
-- **msi:** on Windows, builds Release R25, R26 and R27, stages them with `installer/stage.sh`, builds `installer/PickIt.Installer.wixproj`, and checks the result with `installer/inspect-msi.ps1`. Uploads `PickIt-msi` and the per-year manual-install zips `PickIt-zips`.
+- **msi:** on Windows, builds Release R25, R26 and R27, stages them with `installer/stage.sh`, builds `installer/PickIt.Installer.wixproj`, and checks the result with `installer/inspect-msi.ps1`. Uploads `PickIt-msi` and the per-year manual-install zips `PickIt-zips`. On a release tag it signs the add-in and the MSI first ([Code signing](#code-signing)); `installer/verify-signatures.ps1` checks the signatures there, and on every other build that nothing is signed.
 - **detect:** on Windows, `installer/test-detection.ps1` installs the MSI silently against fake Revit installs and checks which years it fills, repair, upgrade, uninstall, and that `state.json` survives.
 
 The unit tests cover only code with no WPF, Win32 or Revit dependency: the test project compiles `UI/Picking/ScreenSampling.cs` and `Model/Rgb.cs` as linked source instead of referencing the add-in (which is Windows-only), so pure helpers that should be tested belong in a file it links. There are no Revit integration checks yet; the Debug commands above are what a VM tester drives.
@@ -154,3 +154,18 @@ rst-c learns about Pick-It from its own registry (`companions/companions.json`, 
 ### Releasing
 
 A release is a git tag on a commit that is on `main`: `git tag -a v1.0.0 origin/main -m "Pick-It 1.0.0"` then `git push origin v1.0.0`. `release.yml` resolves the version from the tag (the MSI ProductVersion is its numeric `a.b.c`), runs `_build.yml` with `-p:PickItVersion=<version>`, and publishes the MSI, the three per-year zips and `SHA256SUMS.txt` as a GitHub Release. A tag with a hyphen (`v1.0.0-rc.1`) is a pre-release. Run the workflow by hand from the Actions tab for a dry run that publishes nothing.
+
+### Code signing
+
+Releases after v1.0.0 are Authenticode-signed by **AnJ Arch-Tech LLC**, the legal name behind Designs/OS, through Azure Artifact Signing (Public Trust). On a pushed `v*` tag only, `_build.yml`'s msi job (input `sign`, environment `signing`, OIDC login, no stored secret) signs every staged `PickIt*.dll` of the three Revit years (today `PickIt.Revit.dll`) before WiX packs it, so the MSI and the manual-install zips carry the same signed file, and then signs `PickIt-<version>.msi`. Each signature uses SHA-256, an RFC 3161 timestamp from `http://timestamp.acs.microsoft.com` (the certificates are short-lived and renew themselves; the timestamp keeps a signature valid after its certificate expires) and the description "Designs/OS Pick-It". The MSI's Manufacturer and the assembly's Company are Designs/OS.
+
+`installer/verify-signatures.ps1` then fails the run, before anything is uploaded or published, unless the MSI and each DLL inside it (extracted with `msiexec /a`) and in the zips is `Valid`, signed by AnJ Arch-Tech LLC and timestamped, and every DLL is Pick-It's own. The detection job installs that signed MSI, and `SHA256SUMS.txt` hashes the signed files. PR and push builds, local builds and release dry runs are never signed: the `signing` environment admits `v*` tags only and nothing else names it, and the same script checks those builds carry no signature.
+
+To check a download on Windows: file **Properties › Digital Signatures** (signer AnJ Arch-Tech LLC, with a timestamp), or in PowerShell:
+
+```powershell
+Get-AuthenticodeSignature .\PickIt-1.1.0.msi |
+  Format-List Status, @{n='Signer';e={$_.SignerCertificate.Subject}}, @{n='Timestamp';e={$_.TimeStamperCertificate.Subject}}
+```
+
+`Status` must be `Valid` and the signer `CN=AnJ Arch-Tech LLC, O=AnJ Arch-Tech LLC, …`. The same works on `PickIt.Revit.dll` of an installed `Addins\<year>\PickIt\` folder or an unzipped manual install.
