@@ -19,12 +19,19 @@ name: release
 #                notes; marked pre-release when the tag has a hyphenated
 #                suffix.
 #
+# On a pushed tag, build also Authenticode-signs the add-in DLLs (before they
+# are packed) and the MSI as AnJ Arch-Tech LLC ("Designs/OS Pick-It",
+# timestamped) and verifies those signatures (_build.yml, input sign;
+# environment "signing"); assets checksums those signed files and publish
+# ships them.
+#
 # Nothing else publishes a release; pushes to main never tag.
 #
 # Manual runs (Actions > release > Run workflow) are ALWAYS dry runs: they take
 # a version, run prepare + build + assets exactly as a tag would, and skip
 # publish (so they never hold write access), printing what would have been
-# published instead. Use
+# published instead. They are never signed (the signing environment admits
+# v* tags only, and a dry run never names it). Use
 # them to rehearse a release or to produce a test MSI with a chosen version.
 
 on:
@@ -111,11 +118,17 @@ jobs:
             echo "::warning::$commit is not on origin/main (dry run, continuing)"
           fi
 
+  # sign only for a pushed v* tag, never for a manual dry run. id-token: write
+  # is what lets _build.yml's msi job log in to Azure (OIDC) when it signs.
   build:
     needs: prepare
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/_build.yml
     with:
       version: ${{ needs.prepare.outputs.version }}
+      sign: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
 
   # Read-only: gathers and checks the release assets. On a dry run it is the
   # last job; on a tag it hands the assets to publish.

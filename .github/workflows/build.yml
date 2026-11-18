@@ -23,4 +23,14 @@ concurrency:
 
 jobs:
   build:
+    # id-token: write only because _build.yml's msi job declares it for tag
+    # signing, and GitHub checks a called workflow's permissions against the
+    # caller's before any `if` (without it: "The nested job 'msi' is
+    # requesting 'id-token: write', but is only allowed 'id-token: none'").
+    # This workflow never signs: it passes no `sign`, so the msi job names no
+    # environment and runs no login step, and Entra trusts only tokens with
+    # the subject repo:jedbjorn/pick-it:environment:signing.
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/_build.yml
