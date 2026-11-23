@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pick-it.designs-os.com/sitemap.xml
