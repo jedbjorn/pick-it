@@ -1,6 +1,7 @@
 # Pick-It
 
 [![Build](https://github.com/jedbjorn/pick-it/actions/workflows/build.yml/badge.svg)](https://github.com/jedbjorn/pick-it/actions/workflows/build.yml)
+[![Release downloads](https://img.shields.io/github/downloads/jedbjorn/pick-it/total?label=release%20downloads&style=flat-square)](https://github.com/jedbjorn/pick-it/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **Pick-It** is a Revit add-in by [Designs/OS](https://designs-os.com) for picking a colour and showing its RGB values directly on the ribbon button.
