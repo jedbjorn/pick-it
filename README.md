@@ -2,6 +2,7 @@
 
 [![Build](https://github.com/jedbjorn/pick-it/actions/workflows/build.yml/badge.svg)](https://github.com/jedbjorn/pick-it/actions/workflows/build.yml)
 [![Release downloads](https://img.shields.io/github/downloads/jedbjorn/pick-it/total?label=release%20downloads&style=flat-square)](https://github.com/jedbjorn/pick-it/releases)
+[![Unique cloners in the last 14 days](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjedbjorn%2Fsubfloor%2Fclone-traffic%2Funique-cloners.json&query=%24%5B%27pick-it%27%5D.unique_cloners_14d&label=unique%20cloners%20%2814d%29&color=blue&style=flat-square)](https://github.com/jedbjorn/subfloor/blob/clone-traffic/unique-cloners.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **Pick-It** is a Revit add-in by [Designs/OS](https://designs-os.com) for picking a colour and showing its RGB values directly on the ribbon button.
